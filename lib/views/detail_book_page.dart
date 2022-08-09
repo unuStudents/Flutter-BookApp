@@ -1,12 +1,8 @@
-// import 'package:flutter/src/foundation/key.dart';
-// import 'package:flutter/src/widgets/framework.dart';
-import 'dart:convert';
-
-import 'package:book_app/models/book_detail_response.dart';
-import 'package:book_app/models/book_list_respond.dart';
+import 'package:book_app/controllers/book_controller.dart';
 import 'package:book_app/views/image_view_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DetailBookPage extends StatefulWidget {
   const DetailBookPage({
@@ -20,41 +16,12 @@ class DetailBookPage extends StatefulWidget {
 }
 
 class _DetailBookPageState extends State<DetailBookPage> {
-  BookDetailResponse? detailBook;
-  fetchDetailBookApi() async {
-    print(widget.isbn);
-    var url = Uri.parse('https://api.itbook.store/1.0/books/${widget.isbn}');
-    var response = await http.post(url);
-    print('Response Status: ${response.statusCode}');
-    print('Response Body: ${response.body}');
-    if (response.statusCode == 200) {
-      final jsonDetail = jsonDecode(response.body);
-      detailBook = BookDetailResponse.fromJson(jsonDetail);
-      setState(() {});
-      fetchSimiliarBookApi(detailBook!.title!);
-    }
-    // print(await http.read(Uri.parse('https:example.com/api.json')));
-  }
-
-  BookListRespond? similiarBooks;
-  fetchSimiliarBookApi(String title) async {
-    print(widget.isbn);
-    var url = Uri.parse('https://api.itbook.store/1.0/search/${title}');
-    var response = await http.post(url);
-    print('Response Status: ${response.statusCode}');
-    print('Response Body: ${response.body}');
-    if (response.statusCode == 200) {
-      final jsonDetail = jsonDecode(response.body);
-      similiarBooks = BookListRespond.fromJson(jsonDetail);
-      setState(() {});
-    }
-    // print(await http.read(Uri.parse('https:example.com/api.json')));
-  }
-
+  BookController? controller;
   @override
   void initState() {
     super.initState();
-    fetchDetailBookApi();
+    controller = Provider.of<BookController>(context, listen: false);
+    controller!.fetchDetailBookApi(widget.isbn);
   }
 
   @override
@@ -63,120 +30,152 @@ class _DetailBookPageState extends State<DetailBookPage> {
       appBar: AppBar(
         title: const Text("Detail Buku"),
       ),
-      body: detailBook == null
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ImageViewScreen(
-                                imageUrl: detailBook!.image!,
+      body: Consumer<BookController>(builder: (context, controller, child) {
+        return controller.detailBook == null
+            ? const Center(child: CircularProgressIndicator())
+            : Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ImageViewScreen(
+                                  imageUrl: controller.detailBook!.image!,
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                        child: Image.network(
-                          detailBook!.image!,
-                          height: 150,
-                        ),
-                      ),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 15.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                detailBook!.title!,
-                                style: const TextStyle(
-                                    fontSize: 18, fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                detailBook!.authors!,
-                                style: const TextStyle(
-                                    fontSize: 12, color: Colors.grey),
-                              ),
-                              const SizedBox(height: 10),
-                              Row(
-                                children: List.generate(
-                                    5,
-                                    (index) => Icon(
-                                          Icons.star,
-                                          color: index <
-                                                  int.parse(detailBook!.rating!)
-                                              ? Colors.yellow
-                                              : Colors.grey,
-                                        )),
-                              ),
-                              Text(
-                                detailBook!.subtitle!,
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black),
-                              ),
-                              Text(
-                                detailBook!.price!,
-                                style: TextStyle(
-                                    fontSize: 14, color: Colors.green[900]),
-                              ),
-                            ],
+                            );
+                          },
+                          child: Image.network(
+                            controller.detailBook!.image!,
+                            height: 150,
                           ),
                         ),
-                      )
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            // fixedSize: Size(double.infinity, 50),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 15.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  controller.detailBook!.title!,
+                                  style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                Text(
+                                  controller.detailBook!.authors!,
+                                  style: const TextStyle(
+                                      fontSize: 12, color: Colors.grey),
+                                ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  children: List.generate(
+                                      5,
+                                      (index) => Icon(
+                                            Icons.star,
+                                            color: index <
+                                                    int.parse(controller
+                                                        .detailBook!.rating!)
+                                                ? Colors.yellow
+                                                : Colors.grey,
+                                          )),
+                                ),
+                                Text(
+                                  controller.detailBook!.subtitle!,
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black),
+                                ),
+                                Text(
+                                  controller.detailBook!.price!,
+                                  style: TextStyle(
+                                      fontSize: 14, color: Colors.green[900]),
+                                ),
+                              ],
                             ),
-                        onPressed: () {},
-                        child: const Text('Buy')),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    detailBook!.desc!,
-                    textAlign: TextAlign.justify,
-                  ),
-                  const SizedBox(height: 20),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text("Year : ${detailBook!.year!}"),
-                      Text("ISBN : ${detailBook!.isbn13!}"),
-                      Text("${detailBook!.pages!} Pages"),
-                      Text("Publisher : ${detailBook!.publisher!}"),
-                      Text("Language : ${detailBook!.language!}"),
-                      Text('Rating ${detailBook!.rating!}'),
-
-                      // Text(detailBook!.isbn13!),
-                    ],
-                  ),
-                  const Divider(),
-                  // similiarBooks == null
-                  //     ? const CircularProgressIndicator()
-                  //     : ListView.builder(
-                  //         shrinkWrap: true,
-                  //         itemCount: similiarBooks!.books!.length,
-                  //         physics: const NeverScrollableScrollPhysics(),
-                  //         itemBuilder: (context, index) {
-                  //           return Container();
-                  //         },
-                  //       )
-                ],
-              ),
-            ),
+                          ),
+                        )
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(),
+                          onPressed: () async {
+                            Uri uri = Uri.parse(controller.detailBook!.url!);
+                            try {
+                              (await canLaunchUrl(uri))
+                                  ? launchUrl(uri)
+                                  : debugPrint('tidak bersahasil');
+                            } catch (e) {
+                              debugPrint('error');
+                            }
+                          },
+                          child: const Text('Buy')),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      controller.detailBook!.desc!,
+                      textAlign: TextAlign.justify,
+                    ),
+                    const SizedBox(height: 20),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text("Year : ${controller.detailBook!.year!}"),
+                        Text("ISBN : ${controller.detailBook!.isbn13!}"),
+                        Text("${controller.detailBook!.pages!} Pages"),
+                        Text(
+                            "Publisher : ${controller.detailBook!.publisher!}"),
+                        Text("Language : ${controller.detailBook!.language!}"),
+                        Text('Rating ${controller.detailBook!.rating!}'),
+                      ],
+                    ),
+                    const Divider(),
+                    controller.similiarBooks == null
+                        ? const CircularProgressIndicator()
+                        : SizedBox(
+                            height: 150,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount:
+                                  controller.similiarBooks!.books!.length,
+                              itemBuilder: (context, index) {
+                                final current =
+                                    controller.similiarBooks!.books![index];
+                                return SizedBox(
+                                  width: 100,
+                                  child: Column(
+                                    children: [
+                                      Image.network(
+                                        current.image!,
+                                        height: 100,
+                                      ),
+                                      Text(
+                                        current.title!,
+                                        textAlign: TextAlign.center,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 12),
+                                      )
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          )
+                  ],
+                ),
+              );
+      }),
     );
   }
 }
